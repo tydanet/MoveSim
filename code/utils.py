@@ -4,7 +4,10 @@ import os
 import json
 import logging
 import hashlib
+
 import numpy as np
+import pandas as pd
+
 
 def hash_args(*args):
     # json.dumps will keep the dict keys always sorted.
@@ -14,7 +17,7 @@ def hash_args(*args):
 
 def use_gpu(idx):
     # 0->2,3->1,1->3,2->0
-    map = {0:2, 3:1, 1:3, 2:0}
+    map = {0: 2, 3: 1, 1: 3, 2: 0}
     return map[idx]
 
 
@@ -35,16 +38,9 @@ def get_acc(target, scores):
     return acc
 
 
-def get_gps(gps_file):
-    with open(gps_file) as f:
-        gpss = f.readlines()
-    X = []
-    Y = []
-    for gps in gpss:
-        x, y = float(gps.split()[0]), float(gps.split()[1])
-        X.append(x)
-        Y.append(y)
-    return X, Y
+def read_gps(gps_file):
+    gps = pd.read_csv(gps_file, delimiter=" ", header=None)
+    return gps.values
 
 
 def read_data_from_file(fp):
@@ -53,14 +49,8 @@ def read_data_from_file(fp):
     :param fp:
     :return:
     """
-    dat = []
-    with open(fp, 'r') as f:
-        m = 0
-        lines = f.readlines()
-        for idx, line in enumerate(lines):
-            tmp = line.split()
-            dat += [[int(t) for t in tmp]]
-    return np.asarray(dat, dtype='int64')
+    dat = pd.read_csv(fp, delimiter=" ", header=None)
+    return dat.values
 
 
 def write_data_to_file(fp, dat):
@@ -72,22 +62,22 @@ def write_data_to_file(fp, dat):
     dat : list
         list of trajs
     """
-    with open(fp, 'w') as f:
+    with open(fp, "w") as f:
         for i in range(len(dat)):
             line = [str(p) for p in dat[i]]
-            line_s = ' '.join(line)
-            f.write(line_s + '\n')
+            line_s = " ".join(line)
+            f.write(line_s + "\n")
 
 
 def read_logs_from_file(fp):
     dat = []
-    with open(fp, 'r') as f:
-        m = 0
+    with open(fp, "r") as f:
+        # m = 0
         lines = f.readlines()
         for idx, line in enumerate(lines):
             tmp = line.split()
             dat += [[float(t) for t in tmp]]
-    return np.asarray(dat, dtype='float')
+    return np.asarray(dat, dtype="float")
 
 
 def prep_workspace(workspace, datasets, oridata):
@@ -97,16 +87,16 @@ def prep_workspace(workspace, datasets, oridata):
     :param oridata:
     :return:
     """
-    data_path = '/data/stu/yangzeyu/trajgen'
-    if not os.path.exists(data_path+'/%s/%s' % (datasets,workspace)):
-        os.mkdir(data_path+'/%s/%s' % (datasets,workspace))
-    if not os.path.exists(data_path+'/%s/%s/data' % (datasets,workspace)):
-        os.mkdir(data_path+'/%s/%s/data' % (datasets,workspace))
-    if not os.path.exists(data_path+'/%s/%s/logs' % (datasets,workspace)):
-        os.mkdir(data_path+'/%s/%s/logs' % (datasets,workspace))
-    if not os.path.exists(data_path+'/%s/%s/figs' % (datasets,workspace)):
-        os.mkdir(data_path+'/%s/%s/figs' % (datasets,workspace))
-    '''
+    data_path = "/data/stu/yangzeyu/trajgen"
+    if not os.path.exists(data_path + "/%s/%s" % (datasets, workspace)):
+        os.mkdir(data_path + "/%s/%s" % (datasets, workspace))
+    if not os.path.exists(data_path + "/%s/%s/data" % (datasets, workspace)):
+        os.mkdir(data_path + "/%s/%s/data" % (datasets, workspace))
+    if not os.path.exists(data_path + "/%s/%s/logs" % (datasets, workspace)):
+        os.mkdir(data_path + "/%s/%s/logs" % (datasets, workspace))
+    if not os.path.exists(data_path + "/%s/%s/figs" % (datasets, workspace)):
+        os.mkdir(data_path + "/%s/%s/figs" % (datasets, workspace))
+    """
     shutil.copy("../data/%s/real.data" %
                 oridata, "../%s/%s/data/real.data" % (datasets,workspace))
     shutil.copy("../data/%s/val.data" %
@@ -115,22 +105,20 @@ def prep_workspace(workspace, datasets, oridata):
                 oridata, "../%s/%s/data/test.data" % (datasets,workspace))
     shutil.copy("../data/%s/dispre_10.data" %
                 oridata, "../%s/%s/data/dispre.data" % (datasets,workspace))
-    '''
-    with open(data_path+'/%s/%s/logs/loss.log' % (datasets,workspace), 'w') as f:
-        pass
+    """
+    # with open(data_path + "/%s/%s/logs/loss.log" % (datasets, workspace), "w") as f:
+    #     pass
 
-    with open(data_path+'/%s/%s/logs/jsd.log' % (datasets,workspace), 'w') as f:
-        pass
-    
+    # with open(data_path + "/%s/%s/logs/jsd.log" % (datasets, workspace), "w") as f:
+    #     pass
+
 
 def get_workspace_logger(datasets):
-   
-    data_path = '../data'  
+    data_path = "../data"
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(levelname)s: %(message)s")
-    fh = logging.FileHandler(data_path+'/%s/logs/all.log' % (datasets), mode='w')
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s")
+    fh = logging.FileHandler(data_path + "/%s/logs/all.log" % (datasets), mode="w")
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)
     ch = logging.StreamHandler()
