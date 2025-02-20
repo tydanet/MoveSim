@@ -1,14 +1,11 @@
 # encoding: utf-8
 
-import os
-import shutil
 import argparse
-import setproctitle
 import scipy.stats
 import numpy as np
 from collections import Counter
 from math import radians, cos, sin, asin, sqrt
-from utils import get_gps, read_data_from_file, read_logs_from_file
+from utils import get_gps, read_data_from_file
 
 
 def geodistance(lng1,lat1,lng2,lat2):

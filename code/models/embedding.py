@@ -1,11 +1,6 @@
 # coding: utf-8
 
-import torch
-import numpy as np
 import torch.nn as nn
-from torch.autograd import Variable
-from torch.nn import functional as F
-
 
 class Embedding(nn.Module):
     """Common embedding network.
