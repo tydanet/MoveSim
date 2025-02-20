@@ -6,11 +6,12 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 
-
 class Predictor(nn.Module):
-    """simple predictor
-    """
-    def __init__(self, total_locations=8606, embedding_dim=32, hidden_dim=64, cuda=None):
+    """simple predictor"""
+
+    def __init__(
+        self, total_locations=8606, embedding_dim=32, hidden_dim=64, cuda=None
+    ):
         super(Predictor, self).__init__()
         self.total_locations = total_locations
         self.embedding_dim = embedding_dim
@@ -19,7 +20,9 @@ class Predictor(nn.Module):
 
         self.embedding = nn.Embedding(total_locations, embedding_dim)
         self.dropout = nn.Dropout(p=0.6)
-        self.lstm = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, batch_first=True)
+        self.lstm = nn.LSTM(
+            input_size=embedding_dim, hidden_size=hidden_dim, batch_first=True
+        )
         self.linear = nn.Linear(hidden_dim, total_locations)
 
     def init_hidden(self, batch_size):
@@ -38,14 +41,18 @@ class Predictor(nn.Module):
         x = self.embedding(loc_seq)
         h0, c0 = self.init_hidden(x.size(0))
         x, (h, c) = self.lstm(x, (h0, c0))
-        pred = F.log_softmax(self.linear(
-            x.contiguous().view(-1, self.hidden_dim)), dim=-1)
+        pred = F.log_softmax(
+            self.linear(x.contiguous().view(-1, self.hidden_dim)), dim=-1
+        )
         return pred
 
+
 class LSTM(nn.Module):
-    """simple predictor
-    """
-    def __init__(self, total_locations=8606, embedding_dim=32, hidden_dim=64, cuda=None):
+    """simple predictor"""
+
+    def __init__(
+        self, total_locations=8606, embedding_dim=32, hidden_dim=64, cuda=None
+    ):
         super(LSTM, self).__init__()
         self.total_locations = total_locations
         self.embedding_dim = embedding_dim
@@ -54,7 +61,9 @@ class LSTM(nn.Module):
 
         self.embedding = nn.Embedding(total_locations, embedding_dim)
         self.dropout = nn.Dropout(p=0.6)
-        self.lstm = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, batch_first=True)
+        self.lstm = nn.LSTM(
+            input_size=embedding_dim, hidden_size=hidden_dim, batch_first=True
+        )
         self.linear = nn.Linear(hidden_dim, total_locations)
 
     def init_hidden(self, batch_size):
@@ -73,12 +82,12 @@ class LSTM(nn.Module):
         x = self.embedding(loc_seq)
         h0, c0 = self.init_hidden(x.size(0))
         x, (h, c) = self.lstm(x, (h0, c0))
-        pred = F.log_softmax(self.linear(
-            x.contiguous().view(-1, self.hidden_dim)), dim=-1)
+        pred = F.log_softmax(
+            self.linear(x.contiguous().view(-1, self.hidden_dim)), dim=-1
+        )
         return pred
 
-    
-    
+
 class Attn(nn.Module):
     """Attention Module. Heavily borrowed from Practical Pytorch
     https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation"""
@@ -89,9 +98,9 @@ class Attn(nn.Module):
         self.method = method
         self.hidden_size = hidden_size
 
-        if self.method == 'general':
+        if self.method == "general":
             self.attn = nn.Linear(self.hidden_size, self.hidden_size)
-        elif self.method == 'concat':
+        elif self.method == "concat":
             self.attn = nn.Linear(self.hidden_size * 2, self.hidden_size)
             self.other = nn.Parameter(torch.FloatTensor(self.hidden_size))
 
@@ -105,14 +114,14 @@ class Attn(nn.Module):
         return F.softmax(attn_energies)
 
     def score(self, hidden, encoder_output):
-        if self.method == 'dot':
+        if self.method == "dot":
             energy = hidden.dot(encoder_output)
             return energy
-        elif self.method == 'general':
+        elif self.method == "general":
             energy = self.attn(encoder_output)
             energy = hidden.dot(energy)
             return energy
-        elif self.method == 'concat':
+        elif self.method == "concat":
             energy = self.attn(torch.cat((hidden, encoder_output)))
             energy = self.other.dot(energy)
             return energy
@@ -143,14 +152,16 @@ class TrajPreAttnAvgLongUser(nn.Module):
         self.attn = Attn(self.attn_type, self.hidden_size)
         self.fc_attn = nn.Linear(input_size, self.hidden_size)
 
-        if self.rnn_type == 'GRU':
+        if self.rnn_type == "GRU":
             self.rnn = nn.GRU(input_size, self.hidden_size, 1)
-        elif self.rnn_type == 'LSTM':
+        elif self.rnn_type == "LSTM":
             self.rnn = nn.LSTM(input_size, self.hidden_size, 1)
-        elif self.rnn_type == 'RNN':
+        elif self.rnn_type == "RNN":
             self.rnn = nn.RNN(input_size, self.hidden_size, 1)
 
-        self.fc_final = nn.Linear(2 * self.hidden_size + self.uid_emb_size, self.loc_size)
+        self.fc_final = nn.Linear(
+            2 * self.hidden_size + self.uid_emb_size, self.loc_size
+        )
         self.dropout = nn.Dropout(p=parameters.dropout_p)
         self.init_weights()
 
@@ -158,9 +169,13 @@ class TrajPreAttnAvgLongUser(nn.Module):
         """
         Here we reproduce Keras default initialization weights for consistency with Keras version
         """
-        ih = (param.data for name, param in self.named_parameters() if 'weight_ih' in name)
-        hh = (param.data for name, param in self.named_parameters() if 'weight_hh' in name)
-        b = (param.data for name, param in self.named_parameters() if 'bias' in name)
+        ih = (
+            param.data for name, param in self.named_parameters() if "weight_ih" in name
+        )
+        hh = (
+            param.data for name, param in self.named_parameters() if "weight_hh" in name
+        )
+        b = (param.data for name, param in self.named_parameters() if "bias" in name)
 
         for t in ih:
             nn.init.xavier_uniform(t)
@@ -169,7 +184,9 @@ class TrajPreAttnAvgLongUser(nn.Module):
         for t in b:
             nn.init.constant(t, 0)
 
-    def forward(self, loc, tim, history_loc, history_tim, history_count, uid, target_len):
+    def forward(
+        self, loc, tim, history_loc, history_tim, history_count, uid, target_len
+    ):
         h1 = Variable(torch.zeros(1, 1, self.hidden_size))
         c1 = Variable(torch.zeros(1, 1, self.hidden_size))
         if self.use_cuda:
@@ -184,13 +201,19 @@ class TrajPreAttnAvgLongUser(nn.Module):
         loc_emb_history = self.emb_loc(history_loc).squeeze(1)
         tim_emb_history = self.emb_tim(history_tim).squeeze(1)
         count = 0
-        loc_emb_history2 = Variable(torch.zeros(len(history_count), loc_emb_history.size()[-1])).cuda()
-        tim_emb_history2 = Variable(torch.zeros(len(history_count), tim_emb_history.size()[-1])).cuda()
+        loc_emb_history2 = Variable(
+            torch.zeros(len(history_count), loc_emb_history.size()[-1])
+        ).cuda()
+        tim_emb_history2 = Variable(
+            torch.zeros(len(history_count), tim_emb_history.size()[-1])
+        ).cuda()
         for i, c in enumerate(history_count):
             if c == 1:
                 tmp = loc_emb_history[count].unsqueeze(0)
             else:
-                tmp = torch.mean(loc_emb_history[count:count + c, :], dim=0, keepdim=True)
+                tmp = torch.mean(
+                    loc_emb_history[count : count + c, :], dim=0, keepdim=True
+                )
             loc_emb_history2[i, :] = tmp
             tim_emb_history2[i, :] = tim_emb_history[count, :].unsqueeze(0)
             count += c
@@ -198,9 +221,9 @@ class TrajPreAttnAvgLongUser(nn.Module):
         history = torch.cat((loc_emb_history2, tim_emb_history2), 1)
         history = F.tanh(self.fc_attn(history))
 
-        if self.rnn_type == 'GRU' or self.rnn_type == 'RNN':
+        if self.rnn_type == "GRU" or self.rnn_type == "RNN":
             out_state, h1 = self.rnn(x, h1)
-        elif self.rnn_type == 'LSTM':
+        elif self.rnn_type == "LSTM":
             out_state, (h1, c1) = self.rnn(x, (h1, c1))
         out_state = out_state.squeeze(1)
         # out_state = F.selu(out_state)
@@ -240,13 +263,13 @@ class TrajPreLocalAttnLong(nn.Module):
         self.attn = Attn(self.attn_type, self.hidden_size)
         self.fc_attn = nn.Linear(input_size, self.hidden_size)
 
-        if self.rnn_type == 'GRU':
+        if self.rnn_type == "GRU":
             self.rnn_encoder = nn.GRU(input_size, self.hidden_size, 1)
             self.rnn_decoder = nn.GRU(input_size, self.hidden_size, 1)
-        elif self.rnn_type == 'LSTM':
+        elif self.rnn_type == "LSTM":
             self.rnn_encoder = nn.LSTM(input_size, self.hidden_size, 1)
             self.rnn_decoder = nn.LSTM(input_size, self.hidden_size, 1)
-        elif self.rnn_type == 'RNN':
+        elif self.rnn_type == "RNN":
             self.rnn_encoder = nn.RNN(input_size, self.hidden_size, 1)
             self.rnn_decoder = nn.LSTM(input_size, self.hidden_size, 1)
 
@@ -258,9 +281,13 @@ class TrajPreLocalAttnLong(nn.Module):
         """
         Here we reproduce Keras default initialization weights for consistency with Keras version
         """
-        ih = (param.data for name, param in self.named_parameters() if 'weight_ih' in name)
-        hh = (param.data for name, param in self.named_parameters() if 'weight_hh' in name)
-        b = (param.data for name, param in self.named_parameters() if 'bias' in name)
+        ih = (
+            param.data for name, param in self.named_parameters() if "weight_ih" in name
+        )
+        hh = (
+            param.data for name, param in self.named_parameters() if "weight_hh" in name
+        )
+        b = (param.data for name, param in self.named_parameters() if "bias" in name)
 
         for t in ih:
             nn.init.xavier_uniform(t)
@@ -285,10 +312,10 @@ class TrajPreLocalAttnLong(nn.Module):
         x = torch.cat((loc_emb, tim_emb), 2)
         x = self.dropout(x)
 
-        if self.rnn_type == 'GRU' or self.rnn_type == 'RNN':
+        if self.rnn_type == "GRU" or self.rnn_type == "RNN":
             hidden_history, h1 = self.rnn_encoder(x[:-target_len], h1)
             hidden_state, h2 = self.rnn_decoder(x[-target_len:], h2)
-        elif self.rnn_type == 'LSTM':
+        elif self.rnn_type == "LSTM":
             hidden_history, (h1, c1) = self.rnn_encoder(x[:-target_len], (h1, c1))
             hidden_state, (h2, c2) = self.rnn_decoder(x[-target_len:], (h2, c2))
 

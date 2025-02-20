@@ -1,7 +1,8 @@
 # coding: utf-8
 import sys
-sys.path.append('../')
-            
+
+sys.path.append("../")
+
 import math
 import torch
 
@@ -10,33 +11,29 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import functional as F
 
-from utils import *
-
 
 def gen_gaussian_dist(sigma=10):
-    """Return a single-sided gaussian distribution weight array and its index.
-    """
+    """Return a single-sided gaussian distribution weight array and its index."""
     u = 0
     x = np.linspace(0, 1, 100)
-    y = np.exp(-(x - u) ** 2 / (2 * sigma ** 2)) / \
-        (math.sqrt(2 * math.pi) * sigma)
+    y = np.exp(-((x - u) ** 2) / (2 * sigma**2)) / (math.sqrt(2 * math.pi) * sigma)
     return x, y
 
 
 class Generator(nn.Module):
-    """Basic Generator.
-    """
+    """Basic Generator."""
 
     def __init__(
-            self,
-            total_locations=8606,
-            embedding_net=None,
-            embedding_dim=32,
-            hidden_dim=64,
-            bidirectional=False,
-            cuda=None,
-            starting_sample='zero',
-            starting_dist=None):
+        self,
+        total_locations=8606,
+        embedding_net=None,
+        embedding_dim=32,
+        hidden_dim=64,
+        bidirectional=False,
+        cuda=None,
+        starting_sample="zero",
+        starting_dist=None,
+    ):
         """
 
         :param total_locations:
@@ -56,16 +53,18 @@ class Generator(nn.Module):
         self.linear_dim = hidden_dim * 2 if bidirectional else hidden_dim
         self.use_cuda = cuda
         self.starting_sample = starting_sample
-        if self.starting_sample == 'real':
+        if self.starting_sample == "real":
             self.starting_dist = torch.tensor(starting_dist).float()
 
         if embedding_net:
             self.embedding = embedding_net
         else:
             self.embedding = nn.Embedding(
-                num_embeddings=total_locations, embedding_dim=embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim,
-                            bidirectional=bidirectional, batch_first=True)
+                num_embeddings=total_locations, embedding_dim=embedding_dim
+            )
+        self.lstm = nn.LSTM(
+            embedding_dim, hidden_dim, bidirectional=bidirectional, batch_first=True
+        )
         self.linear = nn.Linear(self.linear_dim, total_locations)
 
         self.init_params()
@@ -75,10 +74,12 @@ class Generator(nn.Module):
             param.data.uniform_(-0.05, 0.05)
 
     def init_hidden(self, batch_size):
-        h = Variable(torch.zeros(
-            (2 if self.bidirectional else 1, batch_size, self.hidden_dim)))
-        c = Variable(torch.zeros(
-            (2 if self.bidirectional else 1, batch_size, self.hidden_dim)))
+        h = Variable(
+            torch.zeros((2 if self.bidirectional else 1, batch_size, self.hidden_dim))
+        )
+        c = Variable(
+            torch.zeros((2 if self.bidirectional else 1, batch_size, self.hidden_dim))
+        )
         if self.use_cuda is not None:
             h, c = h.cuda(), c.cuda()
         return h, c
@@ -94,8 +95,9 @@ class Generator(nn.Module):
         x = self.embedding(x)
         h0, c0 = self.init_hidden(x.size(0))
         x, (h, c) = self.lstm(x, (h0, c0))
-        pred = F.log_softmax(self.linear(
-            x.contiguous().view(-1, self.linear_dim)), dim=-1)
+        pred = F.log_softmax(
+            self.linear(x.contiguous().view(-1, self.linear_dim)), dim=-1
+        )
         return pred
 
     def step(self, x, h, c):
@@ -121,20 +123,30 @@ class Generator(nn.Module):
         :param x: (batch_size, k), current generated sequence
         :return: (batch_size, seq_len), complete generated sequence
         """
-        res = []
+
         flag = False  # whether sample from zero
         if x is None:
             flag = True
         s = 0
         if flag:
-            if self.starting_sample == 'zero':
+            if self.starting_sample == "zero":
                 x = Variable(torch.zeros((batch_size, 1)).long())
-            elif self.starting_sample == 'rand':
-                x  = Variable(torch.randint(
-                        high=self.total_locations, size=(batch_size, 1)).long())
-            elif self.starting_sample == 'real':
-                x = Variable(torch.stack(
-                    [torch.multinomial(self.starting_dist, 1) for i in range(batch_size)], dim=0))
+            elif self.starting_sample == "rand":
+                x = Variable(
+                    torch.randint(
+                        high=self.total_locations, size=(batch_size, 1)
+                    ).long()
+                )
+            elif self.starting_sample == "real":
+                x = Variable(
+                    torch.stack(
+                        [
+                            torch.multinomial(self.starting_dist, 1)
+                            for i in range(batch_size)
+                        ],
+                        dim=0,
+                    )
+                )
                 s = 1
         self.lstm.flatten_parameters()
         if self.use_cuda is not None:
@@ -163,24 +175,23 @@ class Generator(nn.Module):
         return output
 
 
-
 class ATGenerator(nn.Module):
-    """Attention Generator.
-    """
+    """Attention Generator."""
 
     def __init__(
-            self,
-            total_locations=8606,
-            embedding_net=None,
-            loc_embedding_dim=256,
-            tim_embedding_dim=16,
-            hidden_dim=64,
-            bidirectional=False,
-            data='geolife',
-            device=None,
-            function=False, 
-            starting_sample='zero',
-            starting_dist=None):
+        self,
+        total_locations=8606,
+        embedding_net=None,
+        loc_embedding_dim=256,
+        tim_embedding_dim=16,
+        hidden_dim=64,
+        bidirectional=False,
+        data="geolife",
+        device=None,
+        function=False,
+        starting_sample="zero",
+        starting_dist=None,
+    ):
         """
 
         :param total_locations:
@@ -205,27 +216,28 @@ class ATGenerator(nn.Module):
         self.starting_sample = starting_sample
         self.function = function
         # process distance weights
-        self.M1 = np.load('../data/%s/M1.npy' % self.data)
-        self.M2 = np.load('../data/%s/M2.npy' % self.data)
+        self.M1 = np.load("../data/%s/M1.npy" % self.data)
+        self.M2 = np.load("../data/%s/M2.npy" % self.data)
 
-        
-        if self.starting_sample == 'real':
+        if self.starting_sample == "real":
             self.starting_dist = torch.tensor(starting_dist).float()
 
         if embedding_net:
             self.embedding = embedding_net
         else:
             self.loc_embedding = nn.Embedding(
-                num_embeddings=self.total_locations, embedding_dim=self.loc_embedding_dim)
+                num_embeddings=self.total_locations,
+                embedding_dim=self.loc_embedding_dim,
+            )
             self.tim_embedding = nn.Embedding(
-                num_embeddings=24, embedding_dim=self.tim_embedding_dim) 
-        
-        
-        self.attn = nn.MultiheadAttention(self.hidden_dim,  4)
+                num_embeddings=24, embedding_dim=self.tim_embedding_dim
+            )
+
+        self.attn = nn.MultiheadAttention(self.hidden_dim, 4)
         self.Q = nn.Linear(self.embedding_dim, self.hidden_dim)
         self.V = nn.Linear(self.embedding_dim, self.hidden_dim)
         self.K = nn.Linear(self.embedding_dim, self.hidden_dim)
-        
+
         self.attn2 = nn.MultiheadAttention(self.hidden_dim, 1)
         self.Q2 = nn.Linear(self.hidden_dim, self.hidden_dim)
         self.V2 = nn.Linear(self.hidden_dim, self.hidden_dim)
@@ -241,9 +253,8 @@ class ATGenerator(nn.Module):
         self.final_linear = nn.Linear(self.linear_dim, self.total_locations)
 
         if function:
-            self.M3 = np.load('../data/%s/M3.npy' % self.data)
+            self.M3 = np.load("../data/%s/M3.npy" % self.data)
             self.linear_mat3 = nn.Linear(self.total_locations, self.linear_dim)
-
 
         self.init_params()
 
@@ -252,10 +263,12 @@ class ATGenerator(nn.Module):
             param.data.uniform_(-0.05, 0.05)
 
     def init_hidden(self, batch_size):
-        h = torch.LongTensor(torch.zeros(
-            (2 if self.bidirectional else 1, batch_size, self.hidden_dim)))
-        c = torch.LongTensor(torch.zeros(
-            (2 if self.bidirectional else 1, batch_size, self.hidden_dim)))
+        h = torch.LongTensor(
+            torch.zeros((2 if self.bidirectional else 1, batch_size, self.hidden_dim))
+        )
+        c = torch.LongTensor(
+            torch.zeros((2 if self.bidirectional else 1, batch_size, self.hidden_dim))
+        )
         if self.device:
             h, c = h.to(self.device), c.to(self.device)
         return h, c
@@ -273,51 +286,46 @@ class ATGenerator(nn.Module):
         mat1 = torch.Tensor(mat1).to(self.device)
         mat2 = torch.Tensor(mat2).to(self.device)
 
-
         lemb = self.loc_embedding(x_l)
         temb = self.tim_embedding(x_t)
         x = torch.cat([lemb, temb], dim=-1)
-        
-        x = x.transpose(0,1)
+
+        x = x.transpose(0, 1)
         Query = self.Q(x)
         Query = F.relu(Query)
-       
+
         Value = self.V(x)
         Value = F.relu(Value)
 
         Key = self.K(x)
-        Key = F.relu(Key)    
+        Key = F.relu(Key)
 
         x, _ = self.attn(Query, Key, Value)
 
-        
         Query = self.Q2(x)
         Query = F.relu(Query)
-       
+
         Value = self.V2(x)
         Value = F.relu(Value)
 
         Key = self.K2(x)
-        Key = F.relu(Key)    
+        Key = F.relu(Key)
 
-        x,_ = self.attn2(Query, Key, Value)       
-        
-        x = x.transpose(0,1)
+        x, _ = self.attn2(Query, Key, Value)
+
+        x = x.transpose(0, 1)
 
         x = x.reshape(-1, self.linear_dim)
-        x = self.linear(x)   
-        x = F.relu(x)   
+        x = self.linear(x)
+        x = F.relu(x)
 
-        
         mat1 = F.relu(self.linear_mat1(mat1))
         mat1 = torch.sigmoid(self.linear_mat1_2(mat1))
         mat1 = F.normalize(mat1)
-        
+
         mat2 = F.relu(self.linear_mat2(mat2))
         mat2 = torch.sigmoid(self.linear_mat2_2(mat2))
         mat2 = F.normalize(mat2)
-
-        
 
         pred = None
 
@@ -325,15 +333,16 @@ class ATGenerator(nn.Module):
             mat3 = self.M3[locs]
             mat3 = torch.Tensor(mat3).to(self.device)
             mat3 = torch.sigmoid(self.linear_mat3(mat3))
-            pred = self.final_linear(x + torch.mul(x,mat1) + torch.mul(x,mat2) + torch.mul(x,mat3))
+            pred = self.final_linear(
+                x + torch.mul(x, mat1) + torch.mul(x, mat2) + torch.mul(x, mat3)
+            )
         else:
-            pred = x + torch.mul(x,mat1) + torch.mul(x,mat2)
+            pred = x + torch.mul(x, mat1) + torch.mul(x, mat2)
         pred = F.log_softmax(pred, dim=-1)
-
 
         return pred
 
-    def step(self, l, t):
+    def step(self, loc, t):
         """
 
         :param x: (batch_size, 1), current location
@@ -342,63 +351,56 @@ class ATGenerator(nn.Module):
         :return:
             (batch_size, total_locations), prediction of next stage
         """
-        
-        #self.attn.flatten_parameters()
-        locs = l.contiguous().view(-1).detach().cpu().numpy()
+
+        # self.attn.flatten_parameters()
+        locs = loc.contiguous().view(-1).detach().cpu().numpy()
         mat1 = self.M1[locs]
         mat2 = self.M2[locs]
         mat1 = torch.Tensor(mat1).to(self.device)
         mat2 = torch.Tensor(mat2).to(self.device)
 
-
-        lemb = self.loc_embedding(l)
+        lemb = self.loc_embedding(loc)
         temb = self.tim_embedding(t)
-        
-        
-        
+
         x = torch.cat([lemb, temb], dim=-1)
-        
-        x = x.transpose(0,1)
+
+        x = x.transpose(0, 1)
 
         Query = self.Q(x)
         Query = F.relu(Query)
-       
+
         Value = self.V(x)
         Value = F.relu(Value)
 
         Key = self.K(x)
-        Key = F.relu(Key)    
+        Key = F.relu(Key)
 
-        x,_ = self.attn(Query, Key, Value)
-
+        x, _ = self.attn(Query, Key, Value)
 
         Query = self.Q2(x)
         Query = F.relu(Query)
-       
+
         Value = self.V2(x)
         Value = F.relu(Value)
 
         Key = self.K2(x)
-        Key = F.relu(Key)    
+        Key = F.relu(Key)
 
-        x,_ = self.attn2(Query, Key, Value)       
-        
-        x = x.transpose(0,1)
+        x, _ = self.attn2(Query, Key, Value)
+
+        x = x.transpose(0, 1)
 
         x = x.reshape(-1, self.linear_dim)
-        x = self.linear(x)   
-        x = F.relu(x)   
+        x = self.linear(x)
+        x = F.relu(x)
 
-        
         mat1 = F.relu(self.linear_mat1(mat1))
         mat1 = torch.sigmoid(self.linear_mat1_2(mat1))
         mat1 = F.normalize(mat1)
-        
+
         mat2 = F.relu(self.linear_mat2(mat2))
         mat2 = torch.sigmoid(self.linear_mat2_2(mat2))
         mat2 = F.normalize(mat2)
-
-        
 
         pred = None
 
@@ -406,11 +408,12 @@ class ATGenerator(nn.Module):
             mat3 = self.M3[locs]
             mat3 = torch.Tensor(mat3).to(self.device)
             mat3 = torch.sigmoid(self.linear_mat3(mat3))
-            pred = self.final_linear(x + torch.mul(x,mat1) + torch.mul(x,mat2) + torch.mul(x,mat3))
+            pred = self.final_linear(
+                x + torch.mul(x, mat1) + torch.mul(x, mat2) + torch.mul(x, mat3)
+            )
         else:
-            pred = x + torch.mul(x,mat1) + torch.mul(x,mat2)
+            pred = x + torch.mul(x, mat1) + torch.mul(x, mat2)
         pred = F.softmax(pred, dim=-1)
-
 
         return pred
 
@@ -422,23 +425,31 @@ class ATGenerator(nn.Module):
         :param x: (batch_size, k), current generated sequence
         :return: (batch_size, seq_len), complete generated sequence
         """
-        res = []
+
         flag = False  # whether sample from zero
-                
-        #self.attn.flatten_parameters()
+
+        # self.attn.flatten_parameters()
 
         if x is None:
             flag = True
         s = 0
         if flag:
-            if self.starting_sample == 'zero':
+            if self.starting_sample == "zero":
                 x = torch.LongTensor(torch.zeros((batch_size, 1))).to(self.device)
-            elif self.starting_sample == 'rand':
-                x  = torch.LongTensor(torch.randint(
-                        high=self.total_locations, size=(batch_size, 1))).to(self.device)
-            elif self.starting_sample == 'real':
-                x = torch.LongTensor(torch.stack(
-                    [torch.multinomial(self.starting_dist, 1) for i in range(batch_size)], dim=0)).to(self.device)
+            elif self.starting_sample == "rand":
+                x = torch.LongTensor(
+                    torch.randint(high=self.total_locations, size=(batch_size, 1))
+                ).to(self.device)
+            elif self.starting_sample == "real":
+                x = torch.LongTensor(
+                    torch.stack(
+                        [
+                            torch.multinomial(self.starting_dist, 1)
+                            for i in range(batch_size)
+                        ],
+                        dim=0,
+                    )
+                ).to(self.device)
                 s = 1
 
         if self.device:
@@ -448,25 +459,25 @@ class ATGenerator(nn.Module):
             if s > 0:
                 samples.append(x)
             for i in range(s, seq_len):
-                t = torch.LongTensor([i%24]).to(self.device)
+                t = torch.LongTensor([i % 24]).to(self.device)
                 t = t.repeat(batch_size).reshape(batch_size, -1)
-                x = self.step(x,t)
+                x = self.step(x, t)
                 x = x.multinomial(1)
                 samples.append(x)
         else:
             given_len = x.size(1)
             lis = x.chunk(x.size(1), dim=1)
             for i in range(given_len):
-                t = torch.LongTensor([i%24]).to(self.device)           
-                t= t.repeat(batch_size).reshape(batch_size, -1)
-                x = self.step(lis[i],t)
+                t = torch.LongTensor([i % 24]).to(self.device)
+                t = t.repeat(batch_size).reshape(batch_size, -1)
+                x = self.step(lis[i], t)
                 samples.append(lis[i])
             x = x.multinomial(1)
             for i in range(given_len, seq_len):
-                samples.append(x)                                
-                t = torch.LongTensor([i%24]).to(self.device)
-                t= t.repeat(batch_size).reshape(batch_size, -1)
-                x = self.step(x,t)
+                samples.append(x)
+                t = torch.LongTensor([i % 24]).to(self.device)
+                t = t.repeat(batch_size).reshape(batch_size, -1)
+                x = self.step(x, t)
                 x = x.multinomial(1)
         output = torch.cat(samples, dim=1)
-        return output 
+        return output

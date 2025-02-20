@@ -1,12 +1,13 @@
 # coding: utf-8
 
 import numpy as np
+import torch
 import torch.nn as nn
 
-class distance_loss(nn.Module):
 
+class distance_loss(nn.Module):
     def __init__(self):
-        with open('../data/raw/Cellular_Baselocation_baidu') as f:
+        with open("../data/raw/Cellular_Baselocation_baidu") as f:
             gpss = f.readlines()
         self.X = []
         self.Y = []
@@ -34,7 +35,6 @@ class distance_loss(nn.Module):
 
 
 class period_loss(nn.Module):
-
     def __init__(self, time_interval):
         self.time_interval = time_interval
         self.mse = nn.MSELoss()
@@ -45,7 +45,7 @@ class period_loss(nn.Module):
         :param x: generated sequence, batch_size * seq_len
         :return:
         """
-        loss = 0.
+        loss = 0.0
         for i in range(0, x.size(1) - self.time_interval):
             loss += self.mse(x[:, i], x[:, i + self.time_interval])
         return loss

@@ -34,15 +34,15 @@ class GANLoss(nn.Module):
         loss = -torch.sum(loss)
         return loss
 
-class distance_loss(nn.Module):
 
+class distance_loss(nn.Module):
     def __init__(self, datasets, device):
         super(distance_loss, self).__init__()
-        if datasets == 'mobile':
-            with open('../data/mobile/gps') as f:
+        if datasets == "mobile":
+            with open("../data/mobile/gps") as f:
                 gpss = f.readlines()
         else:
-             with open('../data/geolife/gps') as f:
+            with open("../data/geolife/gps") as f:
                 gpss = f.readlines()
         self.X = []
         self.Y = []
@@ -74,7 +74,6 @@ class distance_loss(nn.Module):
 
 
 class period_loss(nn.Module):
-
     def __init__(self, time_interval):
         super(period_loss, self).__init__()
         self.time_interval = time_interval
@@ -86,14 +85,13 @@ class period_loss(nn.Module):
         :param x: generated sequence, batch_size * seq_len
         :return:
         """
-        loss = 0.
+        loss = 0.0
         for i in range(0, x.size(1) - self.time_interval):
             loss += torch.sum(torch.ne(x[:, i], x[:, i + self.time_interval]))
         return loss
 
 
 class embd_distance_loss(nn.Module):
-
     def __init__(self, embd):
         super(embd_distance_loss, self).__init__()
         self.embd = embd
@@ -107,13 +105,12 @@ class embd_distance_loss(nn.Module):
         emb = self.embd(x)
         emb = emb.permute(1, 0, 2)
         curr = emb[: x.size(1) - 1].contiguous().view(-1, embd_size)
-        next = emb[1: x.size(1)].contiguous().view(-1, embd_size)
-        loss = torch.nn.functional.mse_loss(curr, next, reduction='sum')
+        next = emb[1 : x.size(1)].contiguous().view(-1, embd_size)
+        loss = torch.nn.functional.mse_loss(curr, next, reduction="sum")
         return loss
 
 
 class embd_period_loss(nn.Module):
-
     def __init__(self, embd):
         super(embd_period_loss, self).__init__()
         self.embd = embd
@@ -126,7 +123,7 @@ class embd_period_loss(nn.Module):
         """
         emb = self.embd(x)
         emb = emb.permute(1, 0, 2)
-        curr = emb[: 24].contiguous().view(-1, embd_size)
+        curr = emb[:24].contiguous().view(-1, embd_size)
         next = emb[24:].contiguous().view(-1, embd_size)
-        loss = torch.nn.functional.mse_loss(curr, next, reduction='sum')
+        loss = torch.nn.functional.mse_loss(curr, next, reduction="sum")
         return loss
